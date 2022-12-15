@@ -6,7 +6,7 @@
 use tauri;
 
 mod app_system_tray;
-
+mod tomato_timer;
 use app_system_tray::{make_system_tray, handler_system_tray_events};
 
 

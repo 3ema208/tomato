@@ -7,14 +7,14 @@ import IconPause from "./assets/pause.png"
 
 function App() {
   const [timer, setTimer] = useState("12:32");
-  const [running, isRunning] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
   
-  async function handler_run() {
-    console.log("run", running)
+  async function handler_run(event) {
+    event.preventDefault()
   }
 
-  async function handler_pause(){
-    console.log("pause", running)
+  async function handler_pause(event){
+    event.preventDefault()
   }
 
   return (

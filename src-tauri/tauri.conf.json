@@ -63,7 +63,7 @@
         "resizable": true,
         "title": "tomato",
         "decorations": true,
-        "visible": true,
+        "visible": false,
         "width": 600,
         "height": 400,
         "transparent": false

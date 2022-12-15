@@ -1,6 +1,6 @@
 use std::str::FromStr;
+use tauri::{SystemTray, CustomMenuItem, SystemTrayMenu, SystemTrayEvent, SystemTrayMenuItem, AppHandle, Manager};
 
-use tauri::{SystemTray, CustomMenuItem, SystemTrayMenu, SystemTrayEvent, SystemTrayMenuItem, AppHandle};
 
 const RUN_TITPLE: &str = "Run";
 const PAUSE_TITLE: &str = "Pause";
@@ -62,6 +62,13 @@ pub fn handler_system_tray_events(_app: &AppHandle, event: SystemTrayEvent) {
 
 
 fn handler_event_menu_items(_app: &AppHandle, id: String) {
+    let main_window = _app.get_window("main").unwrap();
+    if main_window.is_visible().unwrap_or(true) {
+        main_window.hide();
+    } else {
+        main_window.show();
+    }
+
     match AppMenuItem::from_str(id.as_str()) {
         Ok(AppMenuItem::RUN) => {
             println!("RUN command")
