@@ -7,7 +7,7 @@ html, body {
 
 @font-face {
   font-family: Inconsolana;
-  src: url(./fonts/Inconsolata-VariableFont_wdth\,wght.ttf);
+  src: url(./src/fonts/Inconsolata-VariableFont_wdth\,wght.ttf);
 }
 
 .container {

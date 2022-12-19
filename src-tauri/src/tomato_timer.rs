@@ -93,23 +93,41 @@ impl Default for TimerModel {
     }
 }
 
+enum FlowThread {
+    Run,
+    Pause,
+    Exit
+}
+
+
 #[derive(Debug)]
 struct TomatoTimer {
     config: ConfigTimer,
     model: Arc<Mutex<TimerModel>>,
+    chan: Sender<FlowThread>
+
 }
+
+
 
 impl Default for TomatoTimer {
     fn default() -> Self {
+        let sender = TomatoTimer::tasks_run();
         Self {
             config: ConfigTimer::default(),
             model: Arc::new(Mutex::new(TimerModel::default())),
+            chan: sender
         }
     }
 }
 
 
 impl TomatoTimer {
+    fn tasks_run() -> Sender<FlowThread>{
+        let (send, recv) = mpsc::channel::<FlowThread>();
+        send
+    }
+
     fn focused(&mut self) {}
 }
 
