@@ -1,141 +1,108 @@
+use std::{sync::{Mutex, Arc}, thread, time::Duration};
 
-use std::{thread::{self, sleep}, sync::{Arc, Mutex, self, mpsc::{Sender, Receiver, self}}, fmt::Display, time::Duration};
-
-use serde::{Serialize, Deserialize};
-use tauri::async_runtime::channel;
-
-
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ConfigTimer {
-    focused_minutes: i32,
-    break_minutes: i32,
-    amount_round: i8,
-}
-
-impl Default for ConfigTimer {
-    fn default() -> Self {
-        Self {
-            focused_minutes: 30,
-            break_minutes: 5,
-            amount_round: 4 
-        }
-    }
-}
-
-impl ConfigTimer {
-    fn set_focused_minutes(&mut self, val: i32) {
-        self.focused_minutes = val
-    }
-
-    fn set_work_minutes(&mut self, val: i32) {
-        self.break_minutes = val
-    }
-
-    fn set_amount_rounds(&mut self, val: i8) {
-        self.amount_round = val
-    }
-
-}
+use serde::{self, Serialize};
+use tauri;
 
 
 #[derive(Debug, Serialize)]
-enum StatesTimer {
+enum ModeTimer {
     Focused,
-    Break,
-    Pause, 
-    Stopped
-}
-
-#[derive(Debug, Serialize)]
-struct TimeModel {
-    minutes: i32,
-    seconds: i32,
-}
-
-impl TimeModel {
-    fn is_the_end(&self) -> bool {
-        self.minutes == 0 && self.seconds == 0
-    }
-
-    fn minus_second(&mut self) {
-        if self.seconds == 0 && self.minutes != 0 {
-            self.minutes -= 1;
-            self.seconds = 59;
-        } else {
-            self.seconds -= 1;
-        }
-    }
-
-}
-
-impl Display for TimeModel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.minutes, self.seconds)
-    }
+    ShortBreak,
+    LongBreak
 }
 
 
-#[derive(Debug, Serialize)]
-struct TimerModel {
-    state: StatesTimer,
+#[derive(Debug, serde::Serialize)]
+struct ModelTimer {
     is_running: bool,
-    least_time: TimeModel
+    mode: ModeTimer,
+    minutes: i32,
+    seconds: i32
 }
 
-impl Default for TimerModel {
+
+impl Default for ModelTimer {
     fn default() -> Self {
         Self {
-            state: StatesTimer::Stopped,
             is_running: false,
-            least_time: TimeModel { minutes: 0, seconds: 1 }
+            mode: ModeTimer::Focused,            
+            minutes: 30,
+            seconds: 0
         }
     }
 }
 
-enum FlowThread {
-    Run,
-    Pause,
-    Exit
-}
+impl ModelTimer {
+    fn reset_time(&mut self, conf: &TomatoConfig) {
+        self.set_is_running(false);
+        self.minutes = conf.focus_minutes;
+        self.seconds = 0;
+        self.mode = ModeTimer::Focused;
+    }
 
+    fn set_is_running(&mut self, val: bool){
+        self.is_running = val;
+    }
 
-#[derive(Debug)]
-struct TomatoTimer {
-    config: ConfigTimer,
-    model: Arc<Mutex<TimerModel>>,
-    chan: Sender<FlowThread>
-
-}
-
-
-
-impl Default for TomatoTimer {
-    fn default() -> Self {
-        let sender = TomatoTimer::tasks_run();
-        Self {
-            config: ConfigTimer::default(),
-            model: Arc::new(Mutex::new(TimerModel::default())),
-            chan: sender
+    fn deincrement(&mut self) {
+        if self.minutes == 0 && self.seconds == 0 {
+            return 
         }
     }
 }
 
+#[derive(Debug, Default)]
+struct TomatoConfig {
+    focus_minutes: i32,
+    relax_minutes: i32,
+}
+
+
+pub struct TomatoTimer {
+    config: Mutex<TomatoConfig>,
+    model: Arc<Mutex<ModelTimer>>
+}
 
 impl TomatoTimer {
-    fn tasks_run() -> Sender<FlowThread>{
-        let (send, recv) = mpsc::channel::<FlowThread>();
-        send
+    pub fn new() -> Self {
+        Self { 
+            config: Mutex::new(TomatoConfig::default()), 
+            model: Arc::new(Mutex::new(ModelTimer::default())) 
+        }
     }
+}
 
-    fn focused(&mut self) {}
+#[tauri::command]
+pub fn run_timer(timer: tauri::State<TomatoTimer>) {
+    let model = Arc::clone(&timer.model);
+    thread::spawn(move || {
+        model.lock().unwrap().is_running = true;
+        loop {
+            let dur = Duration::from_secs(1);
+            thread::sleep(dur);
+            if model.lock().unwrap().is_running == false {
+                return 
+            }
+            model.lock().unwrap().deincrement();
+        };
+    });
+}
+
+#[tauri::command]
+pub fn stop_timer(timer: tauri::State<TomatoTimer>) {
+    timer.model.lock().unwrap().is_running = false;
+}
+
+#[tauri::command]
+pub fn reset_timer(timer: tauri::State<TomatoTimer>) {
+    let mut model = timer.model.lock().unwrap();
+    let config = timer.config.lock().unwrap();
+    model.reset_time(&config);
 }
 
 
 #[cfg(test)]
 mod tests {
     #[test]
-    fn it_works(){
-    }
-
+    fn it_works(){}
 }
